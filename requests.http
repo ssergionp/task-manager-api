@@ -1,0 +1,44 @@
+### Criar uma tarefa
+POST http://localhost:8080/tasks
+Content-Type: application/json
+
+{
+  "title": "Estudar Spring Boot",
+  "description": "Terminar o CRUD de tarefas",
+  "dueDate": "2026-08-15"
+}
+
+### Listar todas as tarefas
+GET http://localhost:8080/tasks
+
+### Buscar tarefa por id
+GET http://localhost:8080/tasks/1
+
+### Atualizar tarefa
+PUT http://localhost:8080/tasks/1
+Content-Type: application/json
+
+{
+  "title": "Estudar Spring Boot - atualizado",
+  "description": "Terminar o CRUD e começar os testes",
+  "dueDate": "2026-08-20"
+}
+
+### Listar por status
+GET http://localhost:8080/tasks/status/TODO
+
+### Deletar tarefa
+DELETE http://localhost:8080/tasks/1
+
+### Buscar tarefa que não existe (testar erro 404)
+GET http://localhost:8080/tasks/999
+
+### Testar validação (título vazio e data no passado)
+POST http://localhost:8080/tasks
+Content-Type: application/json
+
+{
+  "title": "",
+  "description": "Teste de validação",
+  "dueDate": "2020-01-01"
+}
