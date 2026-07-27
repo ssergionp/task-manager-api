@@ -2,6 +2,7 @@ package com.ssergionp.taskmanagerapi.service;
 
 import com.ssergionp.taskmanagerapi.dto.TaskRequestDTO;
 import com.ssergionp.taskmanagerapi.dto.TaskResponseDTO;
+import com.ssergionp.taskmanagerapi.exception.TaskNotFoundException;
 import com.ssergionp.taskmanagerapi.model.Task;
 import com.ssergionp.taskmanagerapi.model.TaskStatus;
 import com.ssergionp.taskmanagerapi.repository.TaskRepository;
@@ -37,13 +38,13 @@ public class TaskService {
 
     public TaskResponseDTO buscarPorId(Long id) {
         Task task = taskRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Tarefa não encontrada com id: " + id));
+                .orElseThrow(() -> new TaskNotFoundException(id));
         return toResponseDTO(task);
     }
 
     public TaskResponseDTO atualizar(Long id, TaskRequestDTO dto) {
         Task task = taskRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Tarefa não encontrada com id: " + id));
+                .orElseThrow(() -> new TaskNotFoundException(id));
 
         task.setTitle(dto.getTitle());
         task.setDescription(dto.getDescription());
@@ -55,8 +56,9 @@ public class TaskService {
 
     public void deletar(Long id) {
         if (!taskRepository.existsById(id)) {
-            throw new RuntimeException("Tarefa não encontrada com id: " + id);
+            throw new TaskNotFoundException(id);
         }
+        
         taskRepository.deleteById(id);
     }
 
