@@ -68,4 +68,10 @@ public class TaskController {
     public ResponseEntity<List<TaskResponseDTO>> listarPorStatus(@PathVariable TaskStatus status) {
         return ResponseEntity.ok(taskService.listarPorStatus(status));
     }
+
+    @Operation(summary = "Listar todas as tarefas de todos os usuários (somente ADMIN)")
+    @GetMapping("/admin/all")
+    public ResponseEntity<List<TaskResponseDTO>> listarTodasComoAdmin() {
+        return ResponseEntity.ok(taskService.listarTodasComoAdmin());
+    }
 }

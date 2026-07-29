@@ -3,7 +3,7 @@ POST http://localhost:8080/auth/register
 Content-Type: application/json
 
 {
-  "username": "sergio",
+  "username": "admin_teste",
   "password": "senha123"
 }
 
@@ -12,7 +12,7 @@ POST http://localhost:8080/auth/login
 Content-Type: application/json
 
 {
-  "username": "sergio",
+  "username": "admin_teste",
   "password": "senha123"
 }
 
@@ -129,3 +129,7 @@ Authorization: Bearer {{tokenSergio}}
 ### Maria lista suas tarefas (deve ver só a dela)
 GET http://localhost:8080/tasks
 Authorization: Bearer {{tokenMaria}}
+
+### Listar todas as tarefas como ADMIN (deve funcionar só com token de admin)
+GET http://localhost:8080/tasks/admin/all
+Authorization: Bearer {{authToken}}

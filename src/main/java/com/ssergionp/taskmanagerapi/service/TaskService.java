@@ -8,6 +8,7 @@ import com.ssergionp.taskmanagerapi.model.TaskStatus;
 import com.ssergionp.taskmanagerapi.model.User;
 import com.ssergionp.taskmanagerapi.repository.TaskRepository;
 import com.ssergionp.taskmanagerapi.repository.UserRepository;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
@@ -93,5 +94,13 @@ public class TaskService {
                 task.getCreatedAt(),
                 task.getDueDate()
         );
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    public List<TaskResponseDTO> listarTodasComoAdmin() {
+        return taskRepository.findAll()
+                .stream()
+                .map(this::toResponseDTO)
+                .toList();
     }
 }
