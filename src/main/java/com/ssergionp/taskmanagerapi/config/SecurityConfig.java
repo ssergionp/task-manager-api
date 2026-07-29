@@ -1,6 +1,7 @@
 package com.ssergionp.taskmanagerapi.config;
 
 import com.ssergionp.taskmanagerapi.security.CustomUserDetailsService;
+import com.ssergionp.taskmanagerapi.security.JwtAuthenticationEntryPoint;
 import com.ssergionp.taskmanagerapi.security.JwtAuthenticationFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -21,15 +22,18 @@ public class SecurityConfig {
     private final CustomUserDetailsService userDetailsService;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final PasswordEncoder passwordEncoder;
+    private final JwtAuthenticationEntryPoint authenticationEntryPoint;
 
     public SecurityConfig(
             CustomUserDetailsService userDetailsService,
             JwtAuthenticationFilter jwtAuthenticationFilter,
-            PasswordEncoder passwordEncoder
+            PasswordEncoder passwordEncoder,
+            JwtAuthenticationEntryPoint authenticationEntryPoint
     ) {
         this.userDetailsService = userDetailsService;
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
         this.passwordEncoder = passwordEncoder;
+        this.authenticationEntryPoint = authenticationEntryPoint;
     }
 
     @Bean
@@ -43,6 +47,9 @@ public class SecurityConfig {
                 )
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                )
+                .exceptionHandling(exceptions -> exceptions
+                        .authenticationEntryPoint(authenticationEntryPoint)
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
