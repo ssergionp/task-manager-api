@@ -113,8 +113,9 @@ class TaskControllerTest {
         mockMvc.perform(get("/tasks")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(1)))
-                .andExpect(jsonPath("$[0].title").value("Tarefa de teste"));
+                .andExpect(jsonPath("$.content", hasSize(1)))
+                .andExpect(jsonPath("$.content[0].title").value("Tarefa de teste"))
+                .andExpect(jsonPath("$.totalElements").value(1));
     }
 
     @Test

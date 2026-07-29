@@ -1,5 +1,6 @@
 package com.ssergionp.taskmanagerapi.service;
 
+import com.ssergionp.taskmanagerapi.dto.PagedResponseDTO;
 import com.ssergionp.taskmanagerapi.dto.TaskRequestDTO;
 import com.ssergionp.taskmanagerapi.dto.TaskResponseDTO;
 import com.ssergionp.taskmanagerapi.exception.TaskNotFoundException;
@@ -16,6 +17,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 
@@ -27,6 +32,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -52,8 +58,6 @@ class TaskServiceTest {
         usuarioLogado.setUsername("usuario_teste");
         usuarioLogado.setRole(Role.USER);
 
-        // simula um usuário autenticado no contexto de segurança,
-        // já que o TaskService consulta SecurityContextHolder para saber quem está logado
         UsernamePasswordAuthenticationToken auth =
                 new UsernamePasswordAuthenticationToken(usuarioLogado.getUsername(), null, List.of());
         SecurityContextHolder.getContext().setAuthentication(auth);
@@ -75,7 +79,6 @@ class TaskServiceTest {
 
     @AfterEach
     void tearDown() {
-        // limpa o contexto de segurança para não vazar estado entre os testes
         SecurityContextHolder.clearContext();
     }
 
@@ -92,14 +95,20 @@ class TaskServiceTest {
     }
 
     @Test
-    void deveListarTodasAsTarefas() {
+    void deveListarTodasAsTarefasPaginado() {
         when(userRepository.findByUsername("usuario_teste")).thenReturn(Optional.of(usuarioLogado));
-        when(taskRepository.findByOwner(usuarioLogado)).thenReturn(List.of(task));
 
-        List<TaskResponseDTO> resultado = taskService.listarTodas();
+        Pageable pageable = PageRequest.of(0, 10);
+        Page<Task> pageMock = new PageImpl<>(List.of(task), pageable, 1);
 
-        assertThat(resultado).hasSize(1);
-        assertThat(resultado.get(0).getTitle()).isEqualTo("Estudar Spring Boot");
+        when(taskRepository.findByOwner(eq(usuarioLogado), any(Pageable.class))).thenReturn(pageMock);
+
+        PagedResponseDTO<TaskResponseDTO> resultado = taskService.listarTodas(0, 10);
+
+        assertThat(resultado.getContent()).hasSize(1);
+        assertThat(resultado.getContent().get(0).getTitle()).isEqualTo("Estudar Spring Boot");
+        assertThat(resultado.getTotalElements()).isEqualTo(1);
+        assertThat(resultado.getPageNumber()).isEqualTo(0);
     }
 
     @Test
