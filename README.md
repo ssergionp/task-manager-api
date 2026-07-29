@@ -23,6 +23,8 @@ API REST desenvolvida em **Java + Spring Boot** para gerenciamento de tarefas, c
 - **Docker & Docker Compose** (containerização da aplicação e do banco)
 - **Maven** (gerenciamento de dependências e build)
 - **Render** (hospedagem da aplicação)
+- - **Spring Security** (autenticação e autorização)
+- **JWT (JJWT)** (tokens de autenticação stateless)
 
 ---
 
@@ -54,8 +56,68 @@ com.ssergionp.taskmanagerapi
 - Documentação interativa via Swagger/OpenAPI
 - Containerização completa via Docker (aplicação + banco)
 - Deploy em produção com banco de dados PostgreSQL gerenciado
+- Autenticação via JWT (registro e login de usuários)
+- Senhas armazenadas com hash BCrypt
 
 ---
+
+## 🔐 Autenticação (JWT)
+
+A API utiliza autenticação via **JSON Web Token (JWT)**, com **Spring Security**. A maioria dos endpoints exige um token válido no cabeçalho `Authorization`.
+
+### Fluxo de autenticação
+
+1. **Registrar um usuário** (uma única vez):
+   ```
+   POST /auth/register
+   Content-Type: application/json
+
+   {
+     "username": "sergio",
+     "password": "senha123"
+   }
+   ```
+   Retorna `201 Created` com um token JWT já pronto para uso.
+
+2. **Fazer login** (nas próximas vezes):
+   ```
+   POST /auth/login
+   Content-Type: application/json
+
+   {
+     "username": "sergio",
+     "password": "senha123"
+   }
+   ```
+   Retorna `200 OK` com um token JWT:
+   ```json
+   {
+     "token": "eyJhbGciOiJIUzUxMiJ9..."
+   }
+   ```
+
+3. **Usar o token** em todas as requisições aos endpoints protegidos, no cabeçalho `Authorization`:
+   ```
+   Authorization: Bearer eyJhbGciOiJIUzUxMiJ9...
+   ```
+
+### Rotas públicas (não exigem token)
+- `POST /auth/register`
+- `POST /auth/login`
+- `/swagger-ui/**` e `/v3/api-docs/**` (documentação)
+
+### Rotas protegidas (exigem token)
+- Todos os endpoints de `/tasks/**`
+
+### Testando pelo Swagger
+
+Acesse `/swagger-ui.html`, clique no botão **"Authorize"** (canto superior direito), cole o token obtido no login (sem o prefixo `Bearer`) e todos os endpoints protegidos ficam disponíveis para teste diretamente pela interface.
+
+### Detalhes técnicos
+
+- Senhas são armazenadas com hash **BCrypt**, nunca em texto puro.
+- Tokens JWT expiram em 24 horas (configurável via `jwt.expiration` no `application.properties`).
+- A API é **stateless** — nenhuma sessão é mantida no servidor; cada requisição se autentica de forma independente via token.
 
 ## 📍 Endpoints
 
