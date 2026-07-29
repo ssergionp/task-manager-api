@@ -3,15 +3,21 @@ package com.ssergionp.taskmanagerapi.service;
 import com.ssergionp.taskmanagerapi.dto.TaskRequestDTO;
 import com.ssergionp.taskmanagerapi.dto.TaskResponseDTO;
 import com.ssergionp.taskmanagerapi.exception.TaskNotFoundException;
+import com.ssergionp.taskmanagerapi.model.Role;
 import com.ssergionp.taskmanagerapi.model.Task;
 import com.ssergionp.taskmanagerapi.model.TaskStatus;
+import com.ssergionp.taskmanagerapi.model.User;
 import com.ssergionp.taskmanagerapi.repository.TaskRepository;
+import com.ssergionp.taskmanagerapi.repository.UserRepository;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -29,14 +35,29 @@ class TaskServiceTest {
     @Mock
     private TaskRepository taskRepository;
 
+    @Mock
+    private UserRepository userRepository;
+
     @InjectMocks
     private TaskService taskService;
 
     private Task task;
     private TaskRequestDTO requestDTO;
+    private User usuarioLogado;
 
     @BeforeEach
     void setUp() {
+        usuarioLogado = new User();
+        usuarioLogado.setId(1L);
+        usuarioLogado.setUsername("usuario_teste");
+        usuarioLogado.setRole(Role.USER);
+
+        // simula um usuário autenticado no contexto de segurança,
+        // já que o TaskService consulta SecurityContextHolder para saber quem está logado
+        UsernamePasswordAuthenticationToken auth =
+                new UsernamePasswordAuthenticationToken(usuarioLogado.getUsername(), null, List.of());
+        SecurityContextHolder.getContext().setAuthentication(auth);
+
         task = new Task();
         task.setId(1L);
         task.setTitle("Estudar Spring Boot");
@@ -44,6 +65,7 @@ class TaskServiceTest {
         task.setStatus(TaskStatus.TODO);
         task.setCreatedAt(LocalDateTime.now());
         task.setDueDate(LocalDate.now().plusDays(5));
+        task.setOwner(usuarioLogado);
 
         requestDTO = new TaskRequestDTO();
         requestDTO.setTitle("Estudar Spring Boot");
@@ -51,8 +73,15 @@ class TaskServiceTest {
         requestDTO.setDueDate(LocalDate.now().plusDays(5));
     }
 
+    @AfterEach
+    void tearDown() {
+        // limpa o contexto de segurança para não vazar estado entre os testes
+        SecurityContextHolder.clearContext();
+    }
+
     @Test
     void deveCriarTarefaComSucesso() {
+        when(userRepository.findByUsername("usuario_teste")).thenReturn(Optional.of(usuarioLogado));
         when(taskRepository.save(any(Task.class))).thenReturn(task);
 
         TaskResponseDTO resultado = taskService.criar(requestDTO);
@@ -64,7 +93,8 @@ class TaskServiceTest {
 
     @Test
     void deveListarTodasAsTarefas() {
-        when(taskRepository.findAll()).thenReturn(List.of(task));
+        when(userRepository.findByUsername("usuario_teste")).thenReturn(Optional.of(usuarioLogado));
+        when(taskRepository.findByOwner(usuarioLogado)).thenReturn(List.of(task));
 
         List<TaskResponseDTO> resultado = taskService.listarTodas();
 
@@ -74,7 +104,8 @@ class TaskServiceTest {
 
     @Test
     void deveBuscarTarefaPorIdComSucesso() {
-        when(taskRepository.findById(1L)).thenReturn(Optional.of(task));
+        when(userRepository.findByUsername("usuario_teste")).thenReturn(Optional.of(usuarioLogado));
+        when(taskRepository.findByIdAndOwner(1L, usuarioLogado)).thenReturn(Optional.of(task));
 
         TaskResponseDTO resultado = taskService.buscarPorId(1L);
 
@@ -83,7 +114,8 @@ class TaskServiceTest {
 
     @Test
     void deveLancarExcecaoAoBuscarTarefaInexistente() {
-        when(taskRepository.findById(99L)).thenReturn(Optional.empty());
+        when(userRepository.findByUsername("usuario_teste")).thenReturn(Optional.of(usuarioLogado));
+        when(taskRepository.findByIdAndOwner(99L, usuarioLogado)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> taskService.buscarPorId(99L))
                 .isInstanceOf(TaskNotFoundException.class)
@@ -92,7 +124,8 @@ class TaskServiceTest {
 
     @Test
     void deveAtualizarTarefaComSucesso() {
-        when(taskRepository.findById(1L)).thenReturn(Optional.of(task));
+        when(userRepository.findByUsername("usuario_teste")).thenReturn(Optional.of(usuarioLogado));
+        when(taskRepository.findByIdAndOwner(1L, usuarioLogado)).thenReturn(Optional.of(task));
         when(taskRepository.save(any(Task.class))).thenReturn(task);
 
         TaskRequestDTO novoDto = new TaskRequestDTO();
@@ -108,20 +141,22 @@ class TaskServiceTest {
 
     @Test
     void deveDeletarTarefaComSucesso() {
-        when(taskRepository.existsById(1L)).thenReturn(true);
+        when(userRepository.findByUsername("usuario_teste")).thenReturn(Optional.of(usuarioLogado));
+        when(taskRepository.findByIdAndOwner(1L, usuarioLogado)).thenReturn(Optional.of(task));
 
         taskService.deletar(1L);
 
-        verify(taskRepository, times(1)).deleteById(1L);
+        verify(taskRepository, times(1)).delete(task);
     }
 
     @Test
     void deveLancarExcecaoAoDeletarTarefaInexistente() {
-        when(taskRepository.existsById(99L)).thenReturn(false);
+        when(userRepository.findByUsername("usuario_teste")).thenReturn(Optional.of(usuarioLogado));
+        when(taskRepository.findByIdAndOwner(99L, usuarioLogado)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> taskService.deletar(99L))
                 .isInstanceOf(TaskNotFoundException.class);
 
-        verify(taskRepository, never()).deleteById(any());
+        verify(taskRepository, never()).delete(any());
     }
 }

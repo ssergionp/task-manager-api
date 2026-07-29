@@ -75,3 +75,57 @@ Authorization: Bearer {{authToken}}
 
 ### Testar acesso SEM token (deve retornar 403)
 GET http://localhost:8080/tasks
+
+### Registrar usuário 1
+POST http://localhost:8080/auth/register
+Content-Type: application/json
+
+{
+  "username": "sergio2",
+  "password": "senha123"
+}
+
+> {%
+    client.global.set("tokenSergio", response.body.token);
+%}
+
+### Registrar usuário 2
+POST http://localhost:8080/auth/register
+Content-Type: application/json
+
+{
+  "username": "maria",
+  "password": "senha123"
+}
+
+> {%
+    client.global.set("tokenMaria", response.body.token);
+%}
+
+### Sergio cria uma tarefa
+POST http://localhost:8080/tasks
+Content-Type: application/json
+Authorization: Bearer {{tokenSergio}}
+
+{
+  "title": "Tarefa do Sergio",
+  "dueDate": "2026-09-01"
+}
+
+### Maria cria uma tarefa
+POST http://localhost:8080/tasks
+Content-Type: application/json
+Authorization: Bearer {{tokenMaria}}
+
+{
+  "title": "Tarefa da Maria",
+  "dueDate": "2026-09-01"
+}
+
+### Sergio lista suas tarefas (deve ver só a dele)
+GET http://localhost:8080/tasks
+Authorization: Bearer {{tokenSergio}}
+
+### Maria lista suas tarefas (deve ver só a dela)
+GET http://localhost:8080/tasks
+Authorization: Bearer {{tokenMaria}}

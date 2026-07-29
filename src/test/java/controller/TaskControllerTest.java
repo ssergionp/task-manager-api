@@ -149,8 +149,8 @@ class TaskControllerTest {
     }
 
     @Test
-    void deveRetornar403SemToken() throws Exception {
+    void deveRetornar401SemToken() throws Exception {
         mockMvc.perform(get("/tasks"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized());
     }
 }
