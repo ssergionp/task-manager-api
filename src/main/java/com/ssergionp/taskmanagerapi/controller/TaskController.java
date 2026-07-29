@@ -1,5 +1,6 @@
 package com.ssergionp.taskmanagerapi.controller;
 
+import com.ssergionp.taskmanagerapi.dto.PagedResponseDTO;
 import com.ssergionp.taskmanagerapi.dto.TaskRequestDTO;
 import com.ssergionp.taskmanagerapi.dto.TaskResponseDTO;
 import com.ssergionp.taskmanagerapi.model.TaskStatus;
@@ -35,10 +36,13 @@ public class TaskController {
         return ResponseEntity.status(HttpStatus.CREATED).body(criada);
     }
 
-    @Operation(summary = "Listar todas as tarefas")
+    @Operation(summary = "Listar todas as tarefas (paginado)")
     @GetMapping
-    public ResponseEntity<List<TaskResponseDTO>> listarTodas() {
-        return ResponseEntity.ok(taskService.listarTodas());
+    public ResponseEntity<PagedResponseDTO<TaskResponseDTO>> listarTodas(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        return ResponseEntity.ok(taskService.listarTodas(page, size));
     }
 
     @Operation(summary = "Buscar tarefa por ID")
@@ -63,10 +67,14 @@ public class TaskController {
         return ResponseEntity.noContent().build();
     }
 
-    @Operation(summary = "Listar tarefas filtradas por status")
+    @Operation(summary = "Listar tarefas filtradas por status (paginado)")
     @GetMapping("/status/{status}")
-    public ResponseEntity<List<TaskResponseDTO>> listarPorStatus(@PathVariable TaskStatus status) {
-        return ResponseEntity.ok(taskService.listarPorStatus(status));
+    public ResponseEntity<PagedResponseDTO<TaskResponseDTO>> listarPorStatus(
+            @PathVariable TaskStatus status,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        return ResponseEntity.ok(taskService.listarPorStatus(status, page, size));
     }
 
     @Operation(summary = "Listar todas as tarefas de todos os usuários (somente ADMIN)")

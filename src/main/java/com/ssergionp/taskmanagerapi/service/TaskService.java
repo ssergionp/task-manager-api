@@ -1,5 +1,6 @@
 package com.ssergionp.taskmanagerapi.service;
 
+import com.ssergionp.taskmanagerapi.dto.PagedResponseDTO;
 import com.ssergionp.taskmanagerapi.dto.TaskRequestDTO;
 import com.ssergionp.taskmanagerapi.dto.TaskResponseDTO;
 import com.ssergionp.taskmanagerapi.exception.TaskNotFoundException;
@@ -8,6 +9,9 @@ import com.ssergionp.taskmanagerapi.model.TaskStatus;
 import com.ssergionp.taskmanagerapi.model.User;
 import com.ssergionp.taskmanagerapi.repository.TaskRepository;
 import com.ssergionp.taskmanagerapi.repository.UserRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -42,12 +46,12 @@ public class TaskService {
         return toResponseDTO(salva);
     }
 
-    public List<TaskResponseDTO> listarTodas() {
+    public PagedResponseDTO<TaskResponseDTO> listarTodas(int page, int size) {
         User usuario = getUsuarioLogado();
-        return taskRepository.findByOwner(usuario)
-                .stream()
-                .map(this::toResponseDTO)
-                .toList();
+        Pageable pageable = PageRequest.of(page, size);
+        Page<Task> tasksPage = taskRepository.findByOwner(usuario, pageable);
+
+        return toPagedResponseDTO(tasksPage);
     }
 
     public TaskResponseDTO buscarPorId(Long id) {
@@ -77,12 +81,12 @@ public class TaskService {
         taskRepository.delete(task);
     }
 
-    public List<TaskResponseDTO> listarPorStatus(TaskStatus status) {
+    public PagedResponseDTO<TaskResponseDTO> listarPorStatus(TaskStatus status, int page, int size) {
         User usuario = getUsuarioLogado();
-        return taskRepository.findByOwnerAndStatus(usuario, status)
-                .stream()
-                .map(this::toResponseDTO)
-                .toList();
+        Pageable pageable = PageRequest.of(page, size);
+        Page<Task> tasksPage = taskRepository.findByOwnerAndStatus(usuario, status, pageable);
+
+        return toPagedResponseDTO(tasksPage);
     }
 
     private TaskResponseDTO toResponseDTO(Task task) {
@@ -102,5 +106,21 @@ public class TaskService {
                 .stream()
                 .map(this::toResponseDTO)
                 .toList();
+    }
+
+    private PagedResponseDTO<TaskResponseDTO> toPagedResponseDTO(Page<Task> page) {
+        List<TaskResponseDTO> content = page.getContent()
+                .stream()
+                .map(this::toResponseDTO)
+                .toList();
+
+        return new PagedResponseDTO<>(
+                content,
+                page.getNumber(),
+                page.getSize(),
+                page.getTotalElements(),
+                page.getTotalPages(),
+                page.isLast()
+        );
     }
 }

@@ -133,3 +133,7 @@ Authorization: Bearer {{tokenMaria}}
 ### Listar todas as tarefas como ADMIN (deve funcionar só com token de admin)
 GET http://localhost:8080/tasks/admin/all
 Authorization: Bearer {{authToken}}
+
+### Listar tarefas paginado (página 0, 5 por página)
+GET http://localhost:8080/tasks?page=0&size=5
+Authorization: Bearer {{tokenSergio}}
