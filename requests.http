@@ -42,3 +42,21 @@ Content-Type: application/json
   "description": "Teste de validação",
   "dueDate": "2020-01-01"
 }
+
+### Registrar novo usuário
+POST http://localhost:8080/auth/register
+Content-Type: application/json
+
+{
+  "username": "sergio",
+  "password": "senha123"
+}
+
+### Login
+POST http://localhost:8080/auth/login
+Content-Type: application/json
+
+{
+  "username": "sergio",
+  "password": "senha123"
+}
