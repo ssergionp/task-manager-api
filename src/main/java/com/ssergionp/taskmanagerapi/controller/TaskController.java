@@ -44,6 +44,7 @@ public class TaskController {
     @Operation(summary = "Buscar tarefa por ID")
     @ApiResponse(responseCode = "200", description = "Tarefa encontrada")
     @ApiResponse(responseCode = "404", description = "Tarefa não encontrada")
+    @GetMapping("/{id}")
     public ResponseEntity<TaskResponseDTO> buscarPorId(@PathVariable Long id) {
         return ResponseEntity.ok(taskService.buscarPorId(id));
     }
