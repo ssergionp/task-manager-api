@@ -18,6 +18,7 @@ Content-Type: application/json
 
 > {%
     client.global.set("authToken", response.body.token);
+    client.global.set("meuRefreshToken", response.body.refreshToken);
 %}
 
 ### Criar uma tarefa (usando o token salvo)
@@ -180,7 +181,16 @@ POST http://localhost:8080/auth/refresh
 Content-Type: application/json
 
 {
-  "refreshToken": "439c5b9f-b425-40ba-9e55-0bbe2ec37803"
+  "refreshToken": "{{meuRefreshToken}}"
+}
+
+> {%
+    client.global.set("authToken", response.body.token);
+    client.global.set("meuRefreshToken", response.body.refreshToken);
+%}
+
+{
+  "refreshToken": "0ef4d31e-d73b-4166-8999-ba7f9e37dc17"
 }
 
 ### Testar refresh token invalido
