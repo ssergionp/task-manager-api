@@ -137,3 +137,40 @@ Authorization: Bearer {{authToken}}
 ### Listar tarefas paginado (página 0, 5 por página)
 GET http://localhost:8080/tasks?page=0&size=5
 Authorization: Bearer {{tokenSergio}}
+
+### Info da aplicação (ADMIN)
+GET http://localhost:8080/actuator/info
+Authorization: Bearer {{authToken}}
+
+### Health check detalhado (ADMIN)
+GET http://localhost:8080/actuator/health
+Authorization: Bearer {{authToken}}
+
+### Info da aplicação (ADMIN)
+GET http://localhost:8080/actuator/info
+Authorization: Bearer {{authToken}}
+
+### Métricas (ADMIN)
+GET http://localhost:8080/actuator/metrics
+Authorization: Bearer {{authToken}}
+
+### [TESTE ACTUATOR] Login como admin_teste (gera token fresco de ADMIN)
+POST http://localhost:8080/auth/login
+Content-Type: application/json
+
+{
+  "username": "admin_teste",
+  "password": "senha123"
+}
+
+> {%
+    client.global.set("adminToken", response.body.token);
+%}
+
+### [TESTE ACTUATOR] Info da aplicação (ADMIN)
+GET http://localhost:8080/actuator/info
+Authorization: Bearer {{adminToken}}
+
+### [TESTE ACTUATOR] Métricas (ADMIN)
+GET http://localhost:8080/actuator/metrics
+Authorization: Bearer {{adminToken}}
