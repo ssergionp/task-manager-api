@@ -2,10 +2,12 @@ package com.ssergionp.taskmanagerapi.controller;
 
 import com.ssergionp.taskmanagerapi.dto.AuthRequestDTO;
 import com.ssergionp.taskmanagerapi.dto.AuthResponseDTO;
+import com.ssergionp.taskmanagerapi.model.RefreshToken;
 import com.ssergionp.taskmanagerapi.model.Role;
 import com.ssergionp.taskmanagerapi.model.User;
 import com.ssergionp.taskmanagerapi.repository.UserRepository;
 import com.ssergionp.taskmanagerapi.security.JwtService;
+import com.ssergionp.taskmanagerapi.security.RefreshTokenService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -22,24 +24,27 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/auth")
-@Tag(name = "Autenticação", description = "Registro e login de usuários")
+@Tag(name = "Autenticação", description = "Registro, login e renovação de token")
 public class AuthController {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
+    private final RefreshTokenService refreshTokenService;
 
     public AuthController(
             UserRepository userRepository,
             PasswordEncoder passwordEncoder,
             JwtService jwtService,
-            AuthenticationManager authenticationManager
+            AuthenticationManager authenticationManager,
+            RefreshTokenService refreshTokenService
     ) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
         this.authenticationManager = authenticationManager;
+        this.refreshTokenService = refreshTokenService;
     }
 
     @Operation(summary = "Registrar novo usuário")
@@ -51,17 +56,10 @@ public class AuthController {
         user.setRole(Role.USER);
         userRepository.save(user);
 
-        UserDetails userDetails = org.springframework.security.core.userdetails.User.builder()
-                .username(user.getUsername())
-                .password(user.getPassword())
-                .authorities("ROLE_" + user.getRole().name())
-                .build();
-
-        String token = jwtService.generateToken(userDetails);
-        return ResponseEntity.status(HttpStatus.CREATED).body(new AuthResponseDTO(token));
+        return ResponseEntity.status(HttpStatus.CREATED).body(gerarResposta(user));
     }
 
-    @Operation(summary = "Login e geração de token JWT")
+    @Operation(summary = "Login e geração de token JWT + refresh token")
     @PostMapping("/login")
     public ResponseEntity<AuthResponseDTO> login(@Valid @RequestBody AuthRequestDTO dto) {
         authenticationManager.authenticate(
@@ -71,13 +69,19 @@ public class AuthController {
         User user = userRepository.findByUsername(dto.getUsername())
                 .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
 
+        return ResponseEntity.ok(gerarResposta(user));
+    }
+
+    private AuthResponseDTO gerarResposta(User user) {
         UserDetails userDetails = org.springframework.security.core.userdetails.User.builder()
                 .username(user.getUsername())
                 .password(user.getPassword())
                 .authorities("ROLE_" + user.getRole().name())
                 .build();
 
-        String token = jwtService.generateToken(userDetails);
-        return ResponseEntity.ok(new AuthResponseDTO(token));
+        String accessToken = jwtService.generateToken(userDetails);
+        RefreshToken refreshToken = refreshTokenService.criarRefreshToken(user);
+
+        return new AuthResponseDTO(accessToken, refreshToken.getToken());
     }
 }
