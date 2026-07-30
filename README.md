@@ -30,6 +30,7 @@ API REST desenvolvida em **Java + Spring Boot** para gerenciamento de tarefas, c
 - **Spring Boot Actuator** (observabilidade e health-check)
 - **GitHub Actions** (integração contínua)
 - **Refresh Token** (renovação de sessão sem novo login)
+- **Spring Security OAuth2 Client** (login social com Google)
 
 ---
 
@@ -167,6 +168,40 @@ Para evitar que o usuário precise fazer login com usuário/senha com frequênci
 - **Access token curto** → limita o impacto caso um token vazado seja interceptado.
 - **Refresh token revogável** → permite encerrar uma sessão remotamente (logout), algo impossível de fazer com um JWT puro sem essa camada extra.
 - **Um refresh token ativo por usuário** → a cada novo login, o refresh token anterior é descartado, evitando acúmulo de sessões esquecidas.
+
+
+## 🔗 Login com Google (OAuth2)
+
+Além do login tradicional (usuário/senha), a API suporta autenticação via **Google (OAuth2 / OpenID Connect)**.
+
+### Fluxo
+
+1. O cliente redireciona o usuário para:
+   ```
+   GET /oauth2/authorization/google
+   ```
+2. O usuário faz login e autoriza o acesso na tela do Google.
+3. O Google redireciona de volta para a aplicação, que troca o código de autorização pelos dados do perfil (e-mail).
+4. A API então:
+    - Localiza um usuário existente com esse e-mail, **ou** cria um novo automaticamente (marcado como `AuthProvider.GOOGLE`, sem senha própria).
+    - Gera os **mesmos tokens** (access token JWT + refresh token) usados no login tradicional.
+5. A resposta final é idêntica à do `/auth/login` comum:
+   ```json
+   {
+     "token": "eyJhbGciOiJIUzUxMiJ9...",
+     "refreshToken": "550e8400-e29b-41d4-a716-446655440000"
+   }
+   ```
+
+### Por que essa abordagem
+
+- **Um único sistema de tokens** para toda a API — não importa se o usuário entrou com senha ou com Google, o restante do sistema (autorização, refresh, expiração) funciona de forma idêntica.
+- **Contas reaproveitadas por e-mail** — se um usuário já existia localmente e depois usa "Entrar com Google" com o mesmo e-mail, a conta é a mesma, sem duplicar cadastros.
+- **Nenhuma senha armazenada para contas sociais** — o campo `password` fica nulo para usuários com `AuthProvider.GOOGLE`, já que a autenticação é delegada inteiramente ao Google.
+
+### Nota sobre gov.br
+
+A arquitetura foi desenhada de forma genérica o suficiente para, em tese, suportar qualquer provedor OpenID Connect adicional — incluindo o Login Único do gov.br, que usa o mesmo protocolo. Na prática, o acesso de desenvolvedor ao gov.br para aplicações privadas não é self-service: exige processo comercial via Loja Serpro/Dataprev (para empresas) ou solicitação institucional via SGD (para órgãos públicos), o que inviabiliza a integração num projeto pessoal de portfólio. Por esse motivo, o Google foi escolhido como provedor de demonstração, mantendo a mesma base técnica (OAuth2/OIDC) que seria usada numa eventual integração institucional com o gov.br.
 
 ## 🛡️ Recursos avançados
 
