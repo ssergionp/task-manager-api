@@ -1,12 +1,16 @@
+🇺🇸 [English version](./README.en.md)
+
 # 📋 Task Manager API
 ![CI](https://github.com/ssergionp/task-manager-api/actions/workflows/ci.yml/badge.svg)
 
-API REST desenvolvida em **Java + Spring Boot** para gerenciamento de tarefas, com CRUD completo, autenticação de dados via DTOs, tratamento global de exceções, testes automatizados e deploy em produção.
+API REST desenvolvida em **Java + Spring Boot** para gerenciamento de tarefas, com CRUD completo, autenticação JWT com refresh token, login social via Google, autorização por papel (role), testes automatizados e deploy em produção.
 
 🔗 **API em produção:** [https://task-manager-api-vcu3.onrender.com](https://task-manager-api-vcu3.onrender.com)
 📖 **Documentação interativa (Swagger):** [https://task-manager-api-vcu3.onrender.com/swagger-ui.html](https://task-manager-api-vcu3.onrender.com/swagger-ui.html)
 
 > ⚠️ O serviço roda no plano gratuito do Render, que "dorme" após 15 minutos de inatividade. A primeira requisição após esse período pode levar de 30 a 60 segundos para responder — é esperado, não é um bug.
+
+🇺🇸 [English version](./README.en.md)
 
 ---
 
@@ -14,23 +18,23 @@ API REST desenvolvida em **Java + Spring Boot** para gerenciamento de tarefas, c
 
 - **Java 25**
 - **Spring Boot 4.1** (Spring Web, Spring Data JPA, Validation, DevTools)
+- **Spring Security** (autenticação e autorização)
+- **JWT (JJWT)** (tokens de acesso stateless)
+- **Refresh Token** (renovação de sessão sem novo login)
+- **Spring Security OAuth2 Client** (login social com Google)
 - **PostgreSQL** (banco relacional em produção, via [Neon](https://neon.tech))
 - **H2 Database** (banco em memória, usado nos testes automatizados)
+- **Flyway** (migrations versionadas de banco de dados)
 - **Hibernate / JPA** (mapeamento objeto-relacional)
 - **Lombok** (redução de boilerplate)
 - **JUnit 5 + Mockito** (testes unitários)
 - **Spring Test / MockMvc** (testes de integração)
-- **Springdoc OpenAPI** (documentação Swagger)
+- **Springdoc OpenAPI** (documentação Swagger, com suporte a Bearer Token)
+- **Spring Boot Actuator** (observabilidade e health-check)
 - **Docker & Docker Compose** (containerização da aplicação e do banco)
+- **GitHub Actions** (integração contínua — testes automáticos a cada push)
 - **Maven** (gerenciamento de dependências e build)
 - **Render** (hospedagem da aplicação)
-- **Spring Security** (autenticação e autorização)
-- **JWT (JJWT)** (tokens de autenticação stateless)
-- **Flyway** (migrations versionadas de banco de dados)
-- **Spring Boot Actuator** (observabilidade e health-check)
-- **GitHub Actions** (integração contínua)
-- **Refresh Token** (renovação de sessão sem novo login)
-- **Spring Security OAuth2 Client** (login social com Google)
 
 ---
 
@@ -43,8 +47,10 @@ com.ssergionp.taskmanagerapi
 ├── controller     → Endpoints REST (camada de entrada HTTP)
 ├── service        → Regras de negócio
 ├── repository     → Acesso a dados (Spring Data JPA)
-├── model          → Entidades JPA (Task, TaskStatus)
+├── model          → Entidades JPA (Task, User, RefreshToken, ...)
 ├── dto            → Objetos de transferência (Request/Response)
+├── security       → JWT, OAuth2, filtros e serviços de autenticação
+├── config         → Configuração de segurança e da aplicação
 └── exception      → Tratamento global de exceções
 ```
 
@@ -55,15 +61,22 @@ com.ssergionp.taskmanagerapi
 ## ✅ Funcionalidades
 
 - CRUD completo de tarefas (criar, listar, buscar por ID, atualizar, remover)
-- Filtro de tarefas por status (`TODO`, `IN_PROGRESS`, `DONE`)
+- Filtro de tarefas por status (`TODO`, `IN_PROGRESS`, `DONE`), com paginação
 - Validação de dados de entrada (título obrigatório, datas não podem estar no passado, etc.)
 - Tratamento global de exceções com respostas padronizadas (`status`, `message`, `timestamp`)
+- **Autenticação via JWT** (registro e login de usuários)
+- **Fluxo de refresh token** (access token de curta duração + refresh token revogável de longa duração)
+- **Login social com Google (OAuth2)**, reaproveitando o mesmo sistema de tokens
+- **Isolamento por dono** — cada usuário só vê e gerencia suas próprias tarefas
+- **Autorização por papel (role)** — usuários `ADMIN` acessam um endpoint especial que lista as tarefas de todos os usuários
+- Senhas armazenadas com hash **BCrypt**, nunca em texto puro
 - Testes automatizados (unitários e de integração)
 - Documentação interativa via Swagger/OpenAPI
-- Containerização completa via Docker (aplicação + banco)
+- Containerização completa via Docker (aplicação + banco, multi-stage build)
 - Deploy em produção com banco de dados PostgreSQL gerenciado
-- Autenticação via JWT (registro e login de usuários)
-- Senhas armazenadas com hash BCrypt
+- Migrations de banco de dados versionadas (Flyway)
+- Endpoints de observabilidade (Spring Boot Actuator)
+- Pipeline de integração contínua (GitHub Actions)
 
 ---
 
@@ -83,7 +96,7 @@ A API utiliza autenticação via **JSON Web Token (JWT)**, com **Spring Security
      "password": "senha123"
    }
    ```
-   Retorna `201 Created` com um token JWT já pronto para uso.
+   Retorna `201 Created` com um token já pronto para uso.
 
 2. **Fazer login** (nas próximas vezes):
    ```
@@ -95,10 +108,11 @@ A API utiliza autenticação via **JSON Web Token (JWT)**, com **Spring Security
      "password": "senha123"
    }
    ```
-   Retorna `200 OK` com um token JWT:
+   Retorna `200 OK` com:
    ```json
    {
-     "token": "eyJhbGciOiJIUzUxMiJ9..."
+     "token": "eyJhbGciOiJIUzUxMiJ9...",
+     "refreshToken": "550e8400-e29b-41d4-a716-446655440000"
    }
    ```
 
@@ -108,12 +122,14 @@ A API utiliza autenticação via **JSON Web Token (JWT)**, com **Spring Security
    ```
 
 ### Rotas públicas (não exigem token)
-- `POST /auth/register`
-- `POST /auth/login`
-- `/swagger-ui/**` e `/v3/api-docs/**` (documentação)
+- `POST /auth/register`, `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout`
+- `GET /oauth2/authorization/google`, `/login/**`
+- `/swagger-ui/**`, `/v3/api-docs/**`
+- `GET /actuator/health`
 
 ### Rotas protegidas (exigem token)
 - Todos os endpoints de `/tasks/**`
+- `/actuator/info`, `/actuator/metrics` (somente ADMIN)
 
 ### Testando pelo Swagger
 
@@ -122,8 +138,10 @@ Acesse `/swagger-ui.html`, clique no botão **"Authorize"** (canto superior dire
 ### Detalhes técnicos
 
 - Senhas são armazenadas com hash **BCrypt**, nunca em texto puro.
-- Tokens JWT expiram em 24 horas (configurável via `jwt.expiration` no `application.properties`).
+- Access tokens expiram em **15 minutos** (configurável via `jwt.expiration`).
 - A API é **stateless** — nenhuma sessão é mantida no servidor; cada requisição se autentica de forma independente via token.
+
+---
 
 ## 🔄 Refresh Token
 
@@ -134,13 +152,7 @@ Para evitar que o usuário precise fazer login com usuário/senha com frequênci
 
 ### Fluxo completo
 
-1. **Login/registro** retornam os dois tokens:
-   ```json
-   {
-     "token": "eyJhbGciOiJIUzUxMiJ9...",
-     "refreshToken": "550e8400-e29b-41d4-a716-446655440000"
-   }
-   ```
+1. **Login/registro** retornam os dois tokens (ver acima).
 
 2. Quando o **access token expira**, em vez de fazer login novamente, o cliente troca o refresh token por um access token novo:
    ```
@@ -169,6 +181,7 @@ Para evitar que o usuário precise fazer login com usuário/senha com frequênci
 - **Refresh token revogável** → permite encerrar uma sessão remotamente (logout), algo impossível de fazer com um JWT puro sem essa camada extra.
 - **Um refresh token ativo por usuário** → a cada novo login, o refresh token anterior é descartado, evitando acúmulo de sessões esquecidas.
 
+---
 
 ## 🔗 Login com Google (OAuth2)
 
@@ -183,8 +196,8 @@ Além do login tradicional (usuário/senha), a API suporta autenticação via **
 2. O usuário faz login e autoriza o acesso na tela do Google.
 3. O Google redireciona de volta para a aplicação, que troca o código de autorização pelos dados do perfil (e-mail).
 4. A API então:
-    - Localiza um usuário existente com esse e-mail, **ou** cria um novo automaticamente (marcado como `AuthProvider.GOOGLE`, sem senha própria).
-    - Gera os **mesmos tokens** (access token JWT + refresh token) usados no login tradicional.
+   - Localiza um usuário existente com esse e-mail, **ou** cria um novo automaticamente (marcado como `AuthProvider.GOOGLE`, sem senha própria).
+   - Gera os **mesmos tokens** (access token JWT + refresh token) usados no login tradicional.
 5. A resposta final é idêntica à do `/auth/login` comum:
    ```json
    {
@@ -203,12 +216,12 @@ Além do login tradicional (usuário/senha), a API suporta autenticação via **
 
 A arquitetura foi desenhada de forma genérica o suficiente para, em tese, suportar qualquer provedor OpenID Connect adicional — incluindo o Login Único do gov.br, que usa o mesmo protocolo. Na prática, o acesso de desenvolvedor ao gov.br para aplicações privadas não é self-service: exige processo comercial via Loja Serpro/Dataprev (para empresas) ou solicitação institucional via SGD (para órgãos públicos), o que inviabiliza a integração num projeto pessoal de portfólio. Por esse motivo, o Google foi escolhido como provedor de demonstração, mantendo a mesma base técnica (OAuth2/OIDC) que seria usada numa eventual integração institucional com o gov.br.
 
+---
+
 ## 🛡️ Recursos avançados
 
-Além do CRUD básico com autenticação, o projeto conta com recursos que aproximam a aplicação de um cenário real de produção:
-
 ### Controle de acesso
-- **Cada usuário só acessa suas próprias tarefas** — o relacionamento `Task` → `User` garante isolamento total entre usuários.
+- **Isolamento por dono** — o relacionamento `Task` → `User` garante isolamento total entre usuários.
 - **Autorização por papel (role):** usuários `ADMIN` têm acesso a um endpoint especial (`GET /tasks/admin/all`) que lista as tarefas de **todos** os usuários — útil para um painel administrativo.
 - **Respostas HTTP semanticamente corretas:**
    - `401 Unauthorized` → token ausente ou inválido
@@ -249,21 +262,29 @@ A API expõe endpoints de monitoramento:
 ### Integração Contínua (CI)
 Todo push na branch `main` (e Pull Requests) dispara automaticamente uma pipeline no **GitHub Actions** (`.github/workflows/ci.yml`) que:
 1. Configura o ambiente com JDK 25
-2. Roda os 14 testes automatizados (unitários + integração)
+2. Roda todos os testes automatizados (unitários + integração)
 3. Compila e empacota a aplicação, validando que o build está íntegro
 
 O status do build (✅ ou ❌) fica visível diretamente no histórico de commits do repositório.
+
+---
 
 ## 📍 Endpoints
 
 | Método | Rota | Descrição |
 |---|---|---|
+| `POST` | `/auth/register` | Registra um novo usuário |
+| `POST` | `/auth/login` | Login (retorna access token + refresh token) |
+| `POST` | `/auth/refresh` | Troca um refresh token por um novo access token |
+| `POST` | `/auth/logout` | Revoga um refresh token |
+| `GET` | `/oauth2/authorization/google` | Inicia o login OAuth2 com Google |
 | `POST` | `/tasks` | Cria uma nova tarefa |
-| `GET` | `/tasks` | Lista todas as tarefas |
+| `GET` | `/tasks` | Lista as tarefas do usuário autenticado (paginado) |
 | `GET` | `/tasks/{id}` | Busca uma tarefa por ID |
 | `PUT` | `/tasks/{id}` | Atualiza uma tarefa existente |
 | `DELETE` | `/tasks/{id}` | Remove uma tarefa |
-| `GET` | `/tasks/status/{status}` | Lista tarefas filtradas por status |
+| `GET` | `/tasks/status/{status}` | Lista tarefas filtradas por status (paginado) |
+| `GET` | `/tasks/admin/all` | Lista tarefas de todos os usuários (somente ADMIN) |
 
 Exemplo de payload para criação (`POST /tasks`):
 ```json
@@ -321,8 +342,8 @@ Mais rápido para testes pontuais, sem persistência de dados:
 ```
 
 O projeto conta com:
-- **Testes unitários** (`TaskServiceTest`) — testam a lógica de negócio isoladamente, usando Mockito para simular o repositório.
-- **Testes de integração** (`TaskControllerTest`) — testam os endpoints via requisições HTTP simuladas (`MockMvc`), com banco H2 em memória.
+- **Testes unitários** (`TaskServiceTest`, `OAuth2LoginSuccessHandlerTest`) — testam a lógica de negócio isoladamente, usando Mockito para simular repositórios e dependências externas.
+- **Testes de integração** (`TaskControllerTest`, `AuthControllerTest`) — testam os endpoints via requisições HTTP simuladas (`MockMvc`), com banco H2 em memória.
 
 ---
 
@@ -351,10 +372,12 @@ As credenciais de conexão com o banco são passadas via variáveis de ambiente 
 
 ## 📌 Próximos passos (ideias de evolução)
 
-- [ ] Autenticação e autorização (Spring Security + JWT)
-- [ ] Paginação nos endpoints de listagem
-- [ ] Migrations versionadas com Flyway (em vez de `ddl-auto=update`)
-- [ ] Pipeline de CI/CD com GitHub Actions
+- [ ] Autenticação de dois fatores (2FA)
+- [ ] Confirmação de e-mail no registro
+- [ ] Recuperação de senha
+- [ ] Cache com Redis
+- [ ] Rate limiting
+- [ ] Subtarefas / tags nas tarefas
 - [ ] Testes de carga
 
 ---
