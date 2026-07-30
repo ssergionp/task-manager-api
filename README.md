@@ -29,6 +29,7 @@ API REST desenvolvida em **Java + Spring Boot** para gerenciamento de tarefas, c
 - **Flyway** (migrations versionadas de banco de dados)
 - **Spring Boot Actuator** (observabilidade e health-check)
 - **GitHub Actions** (integração contínua)
+- **Refresh Token** (renovação de sessão sem novo login)
 
 ---
 
@@ -122,6 +123,50 @@ Acesse `/swagger-ui.html`, clique no botão **"Authorize"** (canto superior dire
 - Senhas são armazenadas com hash **BCrypt**, nunca em texto puro.
 - Tokens JWT expiram em 24 horas (configurável via `jwt.expiration` no `application.properties`).
 - A API é **stateless** — nenhuma sessão é mantida no servidor; cada requisição se autentica de forma independente via token.
+
+## 🔄 Refresh Token
+
+Para evitar que o usuário precise fazer login com usuário/senha com frequência, a API implementa o padrão **access token + refresh token**:
+
+- **Access token (JWT):** validade curta (**15 minutos**), usado no cabeçalho `Authorization` de toda requisição.
+- **Refresh token:** validade longa (**7 dias**), armazenado no banco de dados, usado exclusivamente para obter um novo access token.
+
+### Fluxo completo
+
+1. **Login/registro** retornam os dois tokens:
+   ```json
+   {
+     "token": "eyJhbGciOiJIUzUxMiJ9...",
+     "refreshToken": "550e8400-e29b-41d4-a716-446655440000"
+   }
+   ```
+
+2. Quando o **access token expira**, em vez de fazer login novamente, o cliente troca o refresh token por um access token novo:
+   ```
+   POST /auth/refresh
+   Content-Type: application/json
+
+   {
+     "refreshToken": "550e8400-e29b-41d4-a716-446655440000"
+   }
+   ```
+   Retorna um novo `token`, mantendo o mesmo `refreshToken`.
+
+3. **Logout** revoga o refresh token, impedindo que ele seja usado novamente:
+   ```
+   POST /auth/logout
+   Content-Type: application/json
+
+   {
+     "refreshToken": "550e8400-e29b-41d4-a716-446655440000"
+   }
+   ```
+
+### Por que essa abordagem
+
+- **Access token curto** → limita o impacto caso um token vazado seja interceptado.
+- **Refresh token revogável** → permite encerrar uma sessão remotamente (logout), algo impossível de fazer com um JWT puro sem essa camada extra.
+- **Um refresh token ativo por usuário** → a cada novo login, o refresh token anterior é descartado, evitando acúmulo de sessões esquecidas.
 
 ## 🛡️ Recursos avançados
 
