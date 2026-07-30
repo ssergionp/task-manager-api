@@ -190,3 +190,19 @@ Content-Type: application/json
 {
   "refreshToken": "439c5b9f-b425-40ba-6767-0bbe2ec37803"
 }
+
+### Logout (revoga o refresh token)
+POST http://localhost:8080/auth/logout
+Content-Type: application/json
+
+{
+  "refreshToken": "aaf725bc-5826-4334-bf00-cc23b7f3a777"
+}
+
+### Tentar usar o refresh token DEPOIS do logout (deve dar 401)
+POST http://localhost:8080/auth/refresh
+Content-Type: application/json
+
+{
+  "refreshToken": "aaf725bc-5826-4334-bf00-cc23b7f3a777"
+}

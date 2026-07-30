@@ -109,4 +109,15 @@ public class AuthController {
 
         return ResponseEntity.ok(new AuthResponseDTO(novoAccessToken, refreshToken.getToken()));
     }
+
+    @Operation(summary = "Logout - revoga o refresh token")
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout(@Valid @RequestBody RefreshRequestDTO dto) {
+        RefreshToken refreshToken = refreshTokenService.buscarPorToken(dto.getRefreshToken())
+                .orElseThrow(() -> new InvalidRefreshTokenException("Refresh token não encontrado"));
+
+        refreshTokenService.revogar(refreshToken);
+
+        return ResponseEntity.noContent().build();
+    }
 }
