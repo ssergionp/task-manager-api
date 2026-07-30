@@ -216,3 +216,7 @@ Content-Type: application/json
 {
   "refreshToken": "aaf725bc-5826-4334-bf00-cc23b7f3a777"
 }
+
+### Testar token gerado via login Google
+GET http://localhost:8080/tasks
+Authorization: Bearer eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJzc2VyZ2lvbnBAZ21haWwuY29tIiwiaWF0IjoxNzg1NDMzODcyLCJleHAiOjE3ODU0MzQ3NzJ9.2vPhi1ToCoohVrcFkMpAC9ePRyiAtiB3EJFM-RHYy1arcHNRchiWUUEeGxiXKO5370HO4N5zW1cx5Wj7dPcaPA
