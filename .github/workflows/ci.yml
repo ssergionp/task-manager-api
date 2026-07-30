@@ -10,23 +10,8 @@ jobs:
   build-and-test:
     runs-on: ubuntu-latest
 
-    services:
-      postgres:
-        image: postgres:16-alpine
-        env:
-          POSTGRES_DB: taskmanager
-          POSTGRES_USER: taskmanager_user
-          POSTGRES_PASSWORD: taskmanager_pass
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
     steps:
-      - name: Checkout do código
+      - name: Checkout do codigo
         uses: actions/checkout@v4
 
       - name: Configurar JDK 25
@@ -36,8 +21,11 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
+      - name: Dar permissao de execucao ao Maven Wrapper
+        run: chmod +x mvnw
+
       - name: Rodar testes
         run: ./mvnw test
 
-      - name: Build da aplicação
+      - name: Build da aplicacao
         run: ./mvnw clean package -DskipTests
