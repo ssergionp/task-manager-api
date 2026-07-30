@@ -1,4 +1,5 @@
 # 📋 Task Manager API
+![CI](https://github.com/ssergionp/task-manager-api/actions/workflows/ci.yml/badge.svg)
 
 API REST desenvolvida em **Java + Spring Boot** para gerenciamento de tarefas, com CRUD completo, autenticação de dados via DTOs, tratamento global de exceções, testes automatizados e deploy em produção.
 
@@ -23,8 +24,11 @@ API REST desenvolvida em **Java + Spring Boot** para gerenciamento de tarefas, c
 - **Docker & Docker Compose** (containerização da aplicação e do banco)
 - **Maven** (gerenciamento de dependências e build)
 - **Render** (hospedagem da aplicação)
-- - **Spring Security** (autenticação e autorização)
+- **Spring Security** (autenticação e autorização)
 - **JWT (JJWT)** (tokens de autenticação stateless)
+- **Flyway** (migrations versionadas de banco de dados)
+- **Spring Boot Actuator** (observabilidade e health-check)
+- **GitHub Actions** (integração contínua)
 
 ---
 
@@ -118,6 +122,57 @@ Acesse `/swagger-ui.html`, clique no botão **"Authorize"** (canto superior dire
 - Senhas são armazenadas com hash **BCrypt**, nunca em texto puro.
 - Tokens JWT expiram em 24 horas (configurável via `jwt.expiration` no `application.properties`).
 - A API é **stateless** — nenhuma sessão é mantida no servidor; cada requisição se autentica de forma independente via token.
+
+## 🛡️ Recursos avançados
+
+Além do CRUD básico com autenticação, o projeto conta com recursos que aproximam a aplicação de um cenário real de produção:
+
+### Controle de acesso
+- **Cada usuário só acessa suas próprias tarefas** — o relacionamento `Task` → `User` garante isolamento total entre usuários.
+- **Autorização por papel (role):** usuários `ADMIN` têm acesso a um endpoint especial (`GET /tasks/admin/all`) que lista as tarefas de **todos** os usuários — útil para um painel administrativo.
+- **Respostas HTTP semanticamente corretas:**
+   - `401 Unauthorized` → token ausente ou inválido
+   - `403 Forbidden` → autenticado, mas sem permissão suficiente
+   - Ambos retornam um JSON padronizado (`status`, `message`, `timestamp`)
+
+### Paginação
+Os endpoints de listagem (`GET /tasks` e `GET /tasks/status/{status}`) suportam paginação via query params:
+```
+GET /tasks?page=0&size=10
+```
+Resposta no formato:
+```json
+{
+  "content": [ ... ],
+  "pageNumber": 0,
+  "pageSize": 10,
+  "totalElements": 42,
+  "totalPages": 5,
+  "last": false
+}
+```
+
+### Migrations versionadas (Flyway)
+O schema do banco de dados é controlado por migrations SQL versionadas, localizadas em `src/main/resources/db/migration`, em vez de deixar o Hibernate alterar tabelas automaticamente. Isso garante:
+- Histórico auditável de cada mudança na estrutura do banco
+- Consistência entre ambientes (local, CI, produção)
+- Segurança contra alterações destrutivas acidentais
+
+> Em produção, o Flyway foi configurado com baseline (`spring.flyway.baseline-on-migrate`), já que o banco já possuía tabelas criadas anteriormente pelo Hibernate antes da adoção do Flyway.
+
+### Observabilidade (Spring Boot Actuator)
+A API expõe endpoints de monitoramento:
+- `GET /actuator/health` — público, usado pelo Render para health-check automático
+- `GET /actuator/info` — informações da aplicação (somente ADMIN)
+- `GET /actuator/metrics` — métricas técnicas: JVM, requisições HTTP, pool de conexões, etc. (somente ADMIN)
+
+### Integração Contínua (CI)
+Todo push na branch `main` (e Pull Requests) dispara automaticamente uma pipeline no **GitHub Actions** (`.github/workflows/ci.yml`) que:
+1. Configura o ambiente com JDK 25
+2. Roda os 14 testes automatizados (unitários + integração)
+3. Compila e empacota a aplicação, validando que o build está íntegro
+
+O status do build (✅ ou ❌) fica visível diretamente no histórico de commits do repositório.
 
 ## 📍 Endpoints
 
