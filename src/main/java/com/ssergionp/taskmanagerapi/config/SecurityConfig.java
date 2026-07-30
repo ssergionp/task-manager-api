@@ -1,9 +1,6 @@
 package com.ssergionp.taskmanagerapi.config;
 
-import com.ssergionp.taskmanagerapi.security.CustomUserDetailsService;
-import com.ssergionp.taskmanagerapi.security.JwtAccessDeniedHandler;
-import com.ssergionp.taskmanagerapi.security.JwtAuthenticationEntryPoint;
-import com.ssergionp.taskmanagerapi.security.JwtAuthenticationFilter;
+import com.ssergionp.taskmanagerapi.security.*;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -27,19 +24,22 @@ public class SecurityConfig {
     private final PasswordEncoder passwordEncoder;
     private final JwtAuthenticationEntryPoint authenticationEntryPoint;
     private final JwtAccessDeniedHandler accessDeniedHandler;
+    private final OAuth2LoginSuccessHandler oAuth2LoginSuccessHandler;
 
     public SecurityConfig(
             CustomUserDetailsService userDetailsService,
             JwtAuthenticationFilter jwtAuthenticationFilter,
             PasswordEncoder passwordEncoder,
             JwtAuthenticationEntryPoint authenticationEntryPoint,
-            JwtAccessDeniedHandler accessDeniedHandler
+            JwtAccessDeniedHandler accessDeniedHandler,
+            OAuth2LoginSuccessHandler oAuth2LoginSuccessHandler
     ) {
         this.userDetailsService = userDetailsService;
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
         this.passwordEncoder = passwordEncoder;
         this.authenticationEntryPoint = authenticationEntryPoint;
         this.accessDeniedHandler = accessDeniedHandler;
+        this.oAuth2LoginSuccessHandler = oAuth2LoginSuccessHandler;
     }
 
     @Bean
@@ -51,6 +51,7 @@ public class SecurityConfig {
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
                         .requestMatchers("/actuator/health").permitAll()
                         .requestMatchers("/actuator/**").hasRole("ADMIN")
+                        .requestMatchers("/oauth2/**", "/login/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session
@@ -60,7 +61,10 @@ public class SecurityConfig {
                         .authenticationEntryPoint(authenticationEntryPoint)
                         .accessDeniedHandler(accessDeniedHandler)
                 )
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                .oauth2Login(oauth2 -> oauth2
+                        .successHandler(oAuth2LoginSuccessHandler)
+                );
 
         return http.build();
     }
