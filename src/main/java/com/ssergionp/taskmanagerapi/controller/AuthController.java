@@ -2,6 +2,8 @@ package com.ssergionp.taskmanagerapi.controller;
 
 import com.ssergionp.taskmanagerapi.dto.AuthRequestDTO;
 import com.ssergionp.taskmanagerapi.dto.AuthResponseDTO;
+import com.ssergionp.taskmanagerapi.dto.RefreshRequestDTO;
+import com.ssergionp.taskmanagerapi.exception.InvalidRefreshTokenException;
 import com.ssergionp.taskmanagerapi.model.RefreshToken;
 import com.ssergionp.taskmanagerapi.model.Role;
 import com.ssergionp.taskmanagerapi.model.User;
@@ -83,5 +85,28 @@ public class AuthController {
         RefreshToken refreshToken = refreshTokenService.criarRefreshToken(user);
 
         return new AuthResponseDTO(accessToken, refreshToken.getToken());
+    }
+
+    @Operation(summary = "Gerar novo access token a partir de um refresh token válido")
+    @PostMapping("/refresh")
+    public ResponseEntity<AuthResponseDTO> refresh(@Valid @RequestBody RefreshRequestDTO dto) {
+        RefreshToken refreshToken = refreshTokenService.buscarPorToken(dto.getRefreshToken())
+                .orElseThrow(() -> new InvalidRefreshTokenException("Refresh token não encontrado"));
+
+        if (!refreshTokenService.isValido(refreshToken)) {
+            throw new InvalidRefreshTokenException("Refresh token expirado ou revogado");
+        }
+
+        User user = refreshToken.getUser();
+
+        UserDetails userDetails = org.springframework.security.core.userdetails.User.builder()
+                .username(user.getUsername())
+                .password(user.getPassword())
+                .authorities("ROLE_" + user.getRole().name())
+                .build();
+
+        String novoAccessToken = jwtService.generateToken(userDetails);
+
+        return ResponseEntity.ok(new AuthResponseDTO(novoAccessToken, refreshToken.getToken()));
     }
 }

@@ -174,3 +174,19 @@ Authorization: Bearer {{adminToken}}
 ### [TESTE ACTUATOR] Métricas (ADMIN)
 GET http://localhost:8080/actuator/metrics
 Authorization: Bearer {{adminToken}}
+
+### Trocar refresh token por novo access token
+POST http://localhost:8080/auth/refresh
+Content-Type: application/json
+
+{
+  "refreshToken": "439c5b9f-b425-40ba-9e55-0bbe2ec37803"
+}
+
+### Testar refresh token invalido
+POST http://localhost:8080/auth/refresh
+Content-Type: application/json
+
+{
+  "refreshToken": "439c5b9f-b425-40ba-6767-0bbe2ec37803"
+}

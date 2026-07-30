@@ -5,6 +5,7 @@ import com.ssergionp.taskmanagerapi.model.User;
 import com.ssergionp.taskmanagerapi.repository.RefreshTokenRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
@@ -22,8 +23,8 @@ public class RefreshTokenService {
         this.refreshTokenRepository = refreshTokenRepository;
     }
 
+    @Transactional
     public RefreshToken criarRefreshToken(User user) {
-        // remove qualquer refresh token anterior desse usuário
         refreshTokenRepository.deleteByUser(user);
 
         RefreshToken refreshToken = new RefreshToken();

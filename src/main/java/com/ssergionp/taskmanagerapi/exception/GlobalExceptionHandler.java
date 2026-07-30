@@ -8,6 +8,8 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 
 import java.util.stream.Collectors;
 
+import com.ssergionp.taskmanagerapi.exception.InvalidRefreshTokenException;
+
 @ControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -43,5 +45,11 @@ public class GlobalExceptionHandler {
 
         ErrorResponse error = new ErrorResponse(HttpStatus.BAD_REQUEST.value(), mensagens);
         return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(InvalidRefreshTokenException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidRefreshToken(InvalidRefreshTokenException ex) {
+        ErrorResponse error = new ErrorResponse(HttpStatus.UNAUTHORIZED.value(), ex.getMessage());
+        return new ResponseEntity<>(error, HttpStatus.UNAUTHORIZED);
     }
 }
